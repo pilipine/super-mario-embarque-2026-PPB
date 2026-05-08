@@ -1,13 +1,13 @@
-//MENU_PRINCIPAL + MENU_NIVEAUX
+//MENU_PRINCIPAL + MENU_NIVEAUX + Menu_PARAMETRE
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
 
-// --- Configuration des Pins (selon ton code de test) ---
-#define BTN_UP      27
-#define BTN_DOWN    26
-#define BTN_SELECT  27 
+// --- Configuration des Pins (Logique HIGH) ---
+#define BTN_RETOUR  27 // Orange (Haut / Retour)
+#define BTN_VERT    26 // Vert   (Bas / Niveaux)
+#define BTN_BLEU    27 // Bleu   (Select / Paramètres)
 #define BUZZER_PIN  14
 #define BLK_PIN      4
 
@@ -20,99 +20,102 @@ TFT_eSPI tft = TFT_eSPI();
 #define MY_SKY       0x5DFF
 #define MY_GREY      0x4208
 
-enum Page { MENU_PRINCIPAL, MENU_NIVEAUX };
-Page pageActuelle = MENU_PRINCIPAL;
+enum Page { PRINCIPAL, NIVEAUX, PARAMETRES };
+Page pageActuelle = PRINCIPAL;
 
 void setup() {
-  // Configuration des entrées selon ton test (Logique HIGH)
-  pinMode(BTN_UP, INPUT);
-  pinMode(BTN_DOWN, INPUT);
-  pinMode(BTN_SELECT, INPUT);
+  pinMode(BTN_RETOUR, INPUT);
+  pinMode(BTN_VERT,   INPUT);
+  pinMode(BTN_BLEU,   INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(BLK_PIN, OUTPUT);
-  digitalWrite(BLK_PIN, HIGH); // Allume le rétroéclairage
+  pinMode(BLK_PIN,    OUTPUT);
+  digitalWrite(BLK_PIN, HIGH);
 
   tft.init();
   tft.setRotation(1);
-  
-  // Affichage initial
   drawMenuPrincipal();
 }
 
 void loop() {
-  // --- Logique de passage au menu Niveaux ---
-  // On utilise BTN_DOWN (26) comme tu l'as demandé pour changer de page
-  if (digitalRead(BTN_DOWN) == HIGH) { 
-    if (pageActuelle == MENU_PRINCIPAL) {
-      tone(BUZZER_PIN, 1000, 100); // Son de transition
-      pageActuelle = MENU_NIVEAUX;
-      drawMenuNiveaux();
-      
-      // Attente du relâchement pour éviter de reboucler
-      while(digitalRead(BTN_DOWN) == HIGH); 
-      delay(200);
+  
+  // --- NAVIGATION DEPUIS LE MENU PRINCIPAL ---
+  if (pageActuelle == PRINCIPAL) {
+    // Si on appuie sur VERT (26) -> Niveaux
+    if (digitalRead(BTN_VERT) == HIGH) {
+      changerDePage(NIVEAUX);
+    }
+    // Si on appuie sur BLEU (27) -> Paramètres (ton image couleur mario)
+    if (digitalRead(BTN_BLEU) == HIGH) {
+      changerDePage(PARAMETRES);
     }
   }
 
-  // --- Logique pour revenir (Annuler) ---
-  // On peut imaginer que BTN_UP (27) permet de revenir au menu principal
-  if (digitalRead(BTN_UP) == HIGH) {
-    if (pageActuelle == MENU_NIVEAUX) {
-      tone(BUZZER_PIN, 500, 100);
-      pageActuelle = MENU_PRINCIPAL;
-      drawMenuPrincipal();
-      
-      while(digitalRead(BTN_UP) == HIGH);
-      delay(200);
+  // --- NAVIGATION DE RETOUR (Toutes pages vers Principal) ---
+  else {
+    // Si on appuie sur ORANGE (27) -> Retour
+    if (digitalRead(BTN_RETOUR) == HIGH) {
+      changerDePage(PRINCIPAL);
     }
   }
 }
 
-// --- VISUEL : MENU PRINCIPAL ---
+// Fonction pour changer de page proprement avec son
+void changerDePage(Page nouvellePage) {
+  tone(BUZZER_PIN, 1000, 100);
+  pageActuelle = nouvellePage;
+  
+  if (pageActuelle == PRINCIPAL)  drawMenuPrincipal();
+  else if (pageActuelle == NIVEAUX)    drawMenuNiveaux();
+  else if (pageActuelle == PARAMETRES) drawMenuParametres();
+  
+  // Attente que TOUS les boutons soient relâchés
+  while(digitalRead(BTN_VERT) == HIGH || digitalRead(BTN_BLEU) == HIGH || digitalRead(BTN_RETOUR) == HIGH);
+  delay(200);
+}
+
+// --- VISUEL 1 : MENU PRINCIPAL ---
 void drawMenuPrincipal() {
   tft.fillScreen(MY_SKY);
-  tft.fillRect(0, 190, 320, 50, MY_GREY);
-
-  // Titre Mario
-  tft.fillRect(45, 20, 230, 70, MY_RED);
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(3);
-  tft.setCursor(60, 30); tft.print("Super");
-  tft.setCursor(60, 55); tft.print("mario bros");
-
-  // Boutons
+  drawCommonUI();
   drawButton(110, MY_GREEN, "niveau");
   drawButton(155, MY_BLUE, "parametre");
 }
 
-// --- VISUEL : MENU NIVEAUX ---
+// --- VISUEL 2 : MENU NIVEAUX ---
 void drawMenuNiveaux() {
   tft.fillScreen(MY_SKY);
-  tft.fillRect(0, 190, 320, 50, MY_GREY);
-
-  // Titre
-  tft.fillRect(45, 10, 230, 65, MY_RED);
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(3);
-  tft.setCursor(60, 15); tft.print("Super");
-  tft.setCursor(60, 40); tft.print("mario bros");
-
-  // Liste des niveaux
+  drawCommonUI();
   drawButton(85,  MY_GREEN,  "niveau 1");
   drawButton(120, MY_YELLOW, "niveau 2");
   drawButton(155, MY_ORANGE, "niveau 3");
   drawButton(190, MY_BLUE,   "annuler");
 }
 
-// --- FONCTION DESSIN BOUTON ---
+// --- VISUEL 3 : MENU PARAMÈTRES (Image image_2acbf2) ---
+void drawMenuParametres() {
+  tft.fillScreen(MY_SKY);
+  drawCommonUI();
+  drawButton(110, MY_GREEN, "couleur mario");
+  drawButton(155, MY_BLUE, "annuler");
+}
+
+// --- ELEMENTS COMMUNS (TITRE ET SOL) ---
+void drawCommonUI() {
+  tft.fillRect(0, 190, 320, 50, MY_GREY); 
+  tft.fillRect(45, 15, 230, 65, MY_RED);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(3);
+  tft.setCursor(60, 20); tft.print("Super");
+  tft.setCursor(60, 45); tft.print("mario bros");
+}
+
+// --- DESSIN BOUTON ---
 void drawButton(int y, uint16_t color, String label) {
   tft.fillRoundRect(80, y, 160, 30, 15, color);
-  
   if (color == MY_YELLOW) tft.setTextColor(TFT_BLACK);
   else tft.setTextColor(TFT_WHITE);
-  
   tft.setTextSize(2);
-  int padding = (160 - (label.length() * 12)) / 2;
-  tft.setCursor(80 + padding, y + 8);
+  int xPos = 160 - (label.length() * 6); 
+  tft.setCursor(xPos, y + 8);
   tft.print(label);
 }
