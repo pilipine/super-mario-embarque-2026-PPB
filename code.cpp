@@ -1,17 +1,17 @@
-//MENU_PRINCIPAL + MENU_NIVEAUX + Menu_PARAMETRE
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
 TFT_eSPI tft = TFT_eSPI();
 
-// --- Configuration des Pins (Logique HIGH) ---
-#define BTN_RETOUR  27 // Orange (Haut / Retour)
-#define BTN_VERT    26 // Vert   (Bas / Niveaux)
-#define BTN_BLEU    27 // Bleu   (Select / Paramètres)
+// --- Pins (Logique HIGH) ---
+#define BTN_ORANGE  25 // Gauche
+#define BTN_VERT    26 // Bas / Entrer Niveaux
+#define BTN_BLEU    27 // Haut / Entrer Paramètres
+#define BTN_JAUNE   32 // Droite
 #define BUZZER_PIN  14
 #define BLK_PIN      4
 
-// --- Couleurs Mario ---
+// --- Couleurs ---
 #define MY_RED       0xF800
 #define MY_BLUE      0x001F
 #define MY_GREEN     0x07E0 
@@ -19,14 +19,20 @@ TFT_eSPI tft = TFT_eSPI();
 #define MY_ORANGE    0xFD20
 #define MY_SKY       0x5DFF
 #define MY_GREY      0x4208
+#define GRID_LINE    0x2124 
 
-enum Page { PRINCIPAL, NIVEAUX, PARAMETRES };
+// --- Variables de Jeu ---
+enum Page { PRINCIPAL, NIVEAUX, PARAMETRES, JEU_NIVEAU_1 };
 Page pageActuelle = PRINCIPAL;
 
+int marioX = 0; // Colonne (0 à 15)
+int marioY = 0; // Ligne (0 à 7)
+
 void setup() {
-  pinMode(BTN_RETOUR, INPUT);
+  pinMode(BTN_ORANGE, INPUT);
   pinMode(BTN_VERT,   INPUT);
   pinMode(BTN_BLEU,   INPUT);
+  pinMode(BTN_JAUNE,  INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(BLK_PIN,    OUTPUT);
   digitalWrite(BLK_PIN, HIGH);
@@ -38,42 +44,87 @@ void setup() {
 
 void loop() {
   
-  // --- NAVIGATION DEPUIS LE MENU PRINCIPAL ---
-  if (pageActuelle == PRINCIPAL) {
-    // Si on appuie sur VERT (26) -> Niveaux
-    if (digitalRead(BTN_VERT) == HIGH) {
-      changerDePage(NIVEAUX);
-    }
-    // Si on appuie sur BLEU (27) -> Paramètres (ton image couleur mario)
-    if (digitalRead(BTN_BLEU) == HIGH) {
-      changerDePage(PARAMETRES);
-    }
-  }
+  if (pageActuelle == JEU_NIVEAU_1) {
+    // --- LOGIQUE DE MOUVEMENT DANS LE JEU ---
+    bool moved = false;
 
-  // --- NAVIGATION DE RETOUR (Toutes pages vers Principal) ---
+    if (digitalRead(BTN_ORANGE) == HIGH) { // GAUCHE
+      if (marioX > 0) { marioX--; moved = true; }
+    }
+    else if (digitalRead(BTN_JAUNE) == HIGH) { // DROITE
+      if (marioX < 15) { marioX++; moved = true; }
+    }
+    else if (digitalRead(BTN_BLEU) == HIGH) { // HAUT
+      if (marioY > 0) { marioY--; moved = true; }
+    }
+    else if (digitalRead(BTN_VERT) == HIGH) { // BAS
+      if (marioY < 7) { marioY++; moved = true; }
+    }
+
+    if (moved) {
+      tone(BUZZER_PIN, 800, 20); // Petit "tic" de mouvement
+      drawGrilleNiveau1(); // Redessine la grille avec la nouvelle position
+      delay(150); // Vitesse de déplacement
+    }
+  } 
   else {
-    // Si on appuie sur ORANGE (27) -> Retour
-    if (digitalRead(BTN_RETOUR) == HIGH) {
-      changerDePage(PRINCIPAL);
+    // --- NAVIGATION DANS LES MENUS ---
+    if (digitalRead(BTN_VERT) == HIGH) {
+      if (pageActuelle == PRINCIPAL) changerDePage(NIVEAUX);
+      else if (pageActuelle == NIVEAUX) {
+        marioX = 0; marioY = 0; // Reset position
+        changerDePage(JEU_NIVEAU_1);
+      }
+      while(digitalRead(BTN_VERT) == HIGH); delay(100);
+    }
+
+    if (digitalRead(BTN_BLEU) == HIGH) {
+      if (pageActuelle == PRINCIPAL) changerDePage(PARAMETRES);
+      else changerDePage(PRINCIPAL); 
+      while(digitalRead(BTN_BLEU) == HIGH); delay(100);
     }
   }
 }
 
-// Fonction pour changer de page proprement avec son
 void changerDePage(Page nouvellePage) {
-  tone(BUZZER_PIN, 1000, 100);
+  tone(BUZZER_PIN, 1000, 50);
   pageActuelle = nouvellePage;
-  
-  if (pageActuelle == PRINCIPAL)  drawMenuPrincipal();
-  else if (pageActuelle == NIVEAUX)    drawMenuNiveaux();
-  else if (pageActuelle == PARAMETRES) drawMenuParametres();
-  
-  // Attente que TOUS les boutons soient relâchés
-  while(digitalRead(BTN_VERT) == HIGH || digitalRead(BTN_BLEU) == HIGH || digitalRead(BTN_RETOUR) == HIGH);
-  delay(200);
+  if (pageActuelle == PRINCIPAL)       drawMenuPrincipal();
+  else if (pageActuelle == NIVEAUX)     drawMenuNiveaux();
+  else if (pageActuelle == PARAMETRES)  drawMenuParametres();
+  else if (pageActuelle == JEU_NIVEAU_1) drawGrilleNiveau1();
 }
 
-// --- VISUEL 1 : MENU PRINCIPAL ---
+void drawGrilleNiveau1() {
+  tft.fillScreen(0x0841); 
+  tft.drawRoundRect(20, 20, 280, 200, 10, MY_SKY);
+  
+  // Bandeau Titre
+  tft.fillRoundRect(30, 30, 260, 35, 5, 0x2124);
+  tft.setTextColor(MY_SKY);
+  tft.setTextSize(2);
+  tft.setCursor(110, 40);
+  tft.print("niveau 1");
+
+  int gridX = 40;
+  int gridY = 75;
+  int cellSize = 15;
+
+  // Dessin de la grille vide
+  for (int row = 0; row < 8; row++) {
+    for (int col = 0; col < 16; col++) {
+      tft.drawRect(gridX + (col * cellSize), gridY + (row * cellSize), cellSize, cellSize, GRID_LINE);
+    }
+  }
+
+  // Carré CYAN (Arrivée fixe)
+  tft.fillRect(gridX + (15 * cellSize) + 2, gridY + (7 * cellSize) + 2, cellSize - 4, cellSize - 4, 0x07FF);
+
+  // Carré ROUGE (Mario - Position variable)
+  tft.fillRect(gridX + (marioX * cellSize) + 2, gridY + (marioY * cellSize) + 2, cellSize - 4, cellSize - 4, MY_RED);
+}
+
+// --- MENUS ---
 void drawMenuPrincipal() {
   tft.fillScreen(MY_SKY);
   drawCommonUI();
@@ -81,7 +132,6 @@ void drawMenuPrincipal() {
   drawButton(155, MY_BLUE, "parametre");
 }
 
-// --- VISUEL 2 : MENU NIVEAUX ---
 void drawMenuNiveaux() {
   tft.fillScreen(MY_SKY);
   drawCommonUI();
@@ -91,7 +141,6 @@ void drawMenuNiveaux() {
   drawButton(190, MY_BLUE,   "annuler");
 }
 
-// --- VISUEL 3 : MENU PARAMÈTRES (Image image_2acbf2) ---
 void drawMenuParametres() {
   tft.fillScreen(MY_SKY);
   drawCommonUI();
@@ -99,7 +148,6 @@ void drawMenuParametres() {
   drawButton(155, MY_BLUE, "annuler");
 }
 
-// --- ELEMENTS COMMUNS (TITRE ET SOL) ---
 void drawCommonUI() {
   tft.fillRect(0, 190, 320, 50, MY_GREY); 
   tft.fillRect(45, 15, 230, 65, MY_RED);
@@ -109,7 +157,6 @@ void drawCommonUI() {
   tft.setCursor(60, 45); tft.print("mario bros");
 }
 
-// --- DESSIN BOUTON ---
 void drawButton(int y, uint16_t color, String label) {
   tft.fillRoundRect(80, y, 160, 30, 15, color);
   if (color == MY_YELLOW) tft.setTextColor(TFT_BLACK);
