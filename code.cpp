@@ -1,4 +1,4 @@
-//menu principale + MENU_NIVEAUX
+//MENU_PRINCIPAL + MENU_NIVEAUX
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
