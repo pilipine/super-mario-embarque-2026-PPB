@@ -51,22 +51,6 @@ void bruitDefaite() {
   tone(BUZZER_PIN, 200, 400);
 }
 
-void setup() {
-  pinMode(BTN_ORANGE, INPUT); pinMode(BTN_VERT, INPUT);
-  pinMode(BTN_BLEU, INPUT); pinMode(BTN_JAUNE, INPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-  
-  tft.init(); 
-  tft.setRotation(1);
-  drawMenuPrincipal();
-}
-
-void loop() {
-  if (pageActuelle == COULEUR) handleMenuCouleurLogic();
-  else if (pageActuelle >= JEU_NIV1) handleGameLogic();
-  else handleMenuNavigation();
-}
-
 // --- LOGIQUE MENU COULEUR ---
 void handleMenuCouleurLogic() {
   bool update = false;
@@ -82,14 +66,55 @@ void handleMenuCouleurLogic() {
     couleurMarioActive = palette[indexCurseurCouleur]; 
     bruitSelection();
     changerDePage(PARAMETRES); 
-    while(digitalRead(BTN_VERT)==HIGH); 
+    while(digitalRead(BTN_VERT) == HIGH); 
   }
   if (digitalRead(BTN_BLEU) == HIGH) { 
     bruitSelection();
     changerDePage(PARAMETRES); 
-    while(digitalRead(BTN_BLEU)==HIGH); 
+    while(digitalRead(BTN_BLEU) == HIGH); 
   }
   if (update) drawMenuCouleurs();
+}
+
+// --- DEPLACEMENT DES ENNEMIS ---
+void deplacerEnnemis() {
+  for (int i = 0; i < nbEnnemisActuels; i++) {
+    int dir = random(4); 
+    int nx = ennemiX[i], ny = ennemiY[i];
+    if (dir == 0) nx++; 
+    else if (dir == 1) nx--; 
+    else if (dir == 2) ny++; 
+    else if (dir == 3) ny--;
+    
+    if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 7 && grille[nx][ny] == 0) { 
+      ennemiX[i] = nx; 
+      ennemiY[i] = ny; 
+    }
+  }
+}
+
+void finDePartie(String txt, uint16_t color) {
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(color);
+  tft.setTextSize(4);
+  tft.setCursor(50, 100);
+  tft.print(txt);
+  delay(3000);
+  changerDePage(NIVEAUX);
+}
+
+// --- VERIFICATION DES COLLISIONS ---
+void verifierCollisions() {
+  if (marioX == cibleX && marioY == cibleY) {
+    bruitVictoire();
+    finDePartie("GAGNE !", MY_GREEN);
+  }
+  for (int i = 0; i < nbEnnemisActuels; i++) {
+    if (marioX == ennemiX[i] && marioY == ennemiY[i]) {
+      bruitDefaite();
+      finDePartie("GAME OVER", MY_RED);
+    }
+  }
 }
 
 // --- LOGIQUE DE JEU ---
@@ -110,50 +135,6 @@ void handleGameLogic() {
       verifierCollisions();
     }
     delay(150);
-  }
-}
-
-void verifierCollisions() {
-  if (marioX == cibleX && marioY == cibleY) {
-    bruitVictoire();
-    finDePartie("GAGNE !", MY_GREEN);
-  }
-  for (int i = 0; i < nbEnnemisActuels; i++) {
-    if (marioX == ennemiX[i] && marioY == ennemiY[i]) {
-      bruitDefaite();
-      finDePartie("GAME OVER", MY_RED);
-    }
-  }
-}
-
-void finDePartie(String txt, uint16_t color) {
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(color);
-  tft.setTextSize(4);
-  tft.setCursor(50, 100);
-  tft.print(txt);
-  delay(3000);
-  changerDePage(NIVEAUX);
-}
-
-// --- NAVIGATION GENERALE ---
-void handleMenuNavigation() {
-  if (digitalRead(BTN_VERT) == HIGH) {
-    bruitSelection();
-    if (pageActuelle == PRINCIPAL) changerDePage(NIVEAUX);
-    else if (pageActuelle == PARAMETRES) changerDePage(COULEUR);
-    else if (pageActuelle == NIVEAUX) initialiserJeu(JEU_NIV1);
-    while(digitalRead(BTN_VERT) == HIGH); delay(100);
-  }
-  if (digitalRead(BTN_BLEU) == HIGH) {
-    bruitSelection();
-    if (pageActuelle == PRINCIPAL) changerDePage(PARAMETRES);
-    else changerDePage(PRINCIPAL);
-    while(digitalRead(BTN_BLEU) == HIGH); delay(100);
-  }
-  if (pageActuelle == NIVEAUX) {
-    if (digitalRead(BTN_JAUNE) == HIGH) { bruitSelection(); initialiserJeu(JEU_NIV2); }
-    if (digitalRead(BTN_ORANGE) == HIGH) { bruitSelection(); initialiserJeu(JEU_NIV3); }
   }
 }
 
@@ -181,20 +162,6 @@ void drawGrilleJeu() {
   tft.fillRect(gridX + (cibleX*cellW)+2, gridY + (cibleY*cellH)+2, cellW-4, cellH-4, 0x07FF);
 }
 
-void drawMenuCouleurs() {
-  tft.fillScreen(MY_SKY); drawCommonUI();
-  tft.setTextColor(TFT_WHITE); tft.setTextSize(2);
-  tft.setCursor(65, 90); tft.print("choisis ta couleur");
-  int startX = 40; int yPos = 120;
-  for(int i = 0; i < 7; i++) {
-    int xBox = startX + (i * 35);
-    if (i == indexCurseurCouleur) tft.drawRect(xBox-3, yPos-3, 26, 26, MY_YELLOW);
-    tft.fillRect(xBox, yPos, 20, 20, palette[i]);
-  }
-  drawButton(160, MY_GREEN, "selectionner");
-  drawButton(195, MY_BLUE, "annuler");
-}
-
 void drawCommonUI() {
   tft.fillRect(0, 200, 320, 40, MY_GREY);
   tft.fillRect(45, 15, 230, 65, MY_RED);
@@ -209,6 +176,20 @@ void drawButton(int y, uint16_t color, String label) {
   tft.setCursor(160 - (label.length()*6), y + 8); tft.print(label);
 }
 
+void drawMenuCouleurs() {
+  tft.fillScreen(MY_SKY); drawCommonUI();
+  tft.setTextColor(TFT_WHITE); tft.setTextSize(2);
+  tft.setCursor(65, 90); tft.print("choisis ta couleur");
+  int startX = 40; int yPos = 120;
+  for(int i = 0; i < 7; i++) {
+    int xBox = startX + (i * 35);
+    if (i == indexCurseurCouleur) tft.drawRect(xBox-3, yPos-3, 26, 26, MY_YELLOW);
+    tft.fillRect(xBox, yPos, 20, 20, palette[i]);
+  }
+  drawButton(160, MY_GREEN, "selectionner");
+  drawButton(195, MY_BLUE, "annuler");
+}
+
 void changerDePage(Page p) {
   pageActuelle = p;
   if (p == PRINCIPAL) { tft.fillScreen(MY_SKY); drawCommonUI(); drawButton(110, MY_GREEN, "niveau"); drawButton(155, MY_BLUE, "parametre"); }
@@ -218,23 +199,73 @@ void changerDePage(Page p) {
   else drawGrilleJeu();
 }
 
+// --- INITIALISATION DU JEU (AVEC ZONE DE SECURITE) ---
 void initialiserJeu(Page niv) {
   marioX = 0; marioY = 0; randomSeed(millis());
   if (niv == JEU_NIV1) nbEnnemisActuels = 0;
   else if (niv == JEU_NIV2) nbEnnemisActuels = 5;
   else if (niv == JEU_NIV3) nbEnnemisActuels = 11;
-  for (int x = 0; x < 16; x++) for (int y = 0; y < 8; y++) grille[x][y] = (random(100) < 15) ? 1 : 0;
-  grille[0][0] = 0; grille[cibleX][cibleY] = 0;
-  for (int i = 0; i < nbEnnemisActuels; i++) { ennemiX[i] = random(5, 15); ennemiY[i] = random(0, 7); grille[ennemiX[i]][ennemiY[i]] = 0; }
+  
+  // Génération de la grille
+  for (int x = 0; x < 16; x++) {
+    for (int y = 0; y < 8; y++) {
+      // Zone de sécurité 2x2 en haut à gauche pour éviter de bloquer Mario au départ
+      if (x <= 1 && y <= 1) {
+        grille[x][y] = 0; 
+      } else {
+        grille[x][y] = (random(100) < 15) ? 1 : 0;
+      }
+    }
+  }
+  
+  grille[cibleX][cibleY] = 0; // Sécurité pour la zone d'arrivée
+  
+  // Placement des ennemis
+  for (int i = 0; i < nbEnnemisActuels; i++) { 
+    ennemiX[i] = random(5, 15); 
+    ennemiY[i] = random(0, 7); 
+    grille[ennemiX[i]][ennemiY[i]] = 0; 
+  }
+  
   changerDePage(niv);
 }
 
-void deplacerEnnemis() {
-  for (int i = 0; i < nbEnnemisActuels; i++) {
-    int dir = random(4); int nx = ennemiX[i], ny = ennemiY[i];
-    if (dir == 0) nx++; else if (dir == 1) nx--; else if (dir == 2) ny++; else if (dir == 3) ny--;
-    if (nx >= 0 && nx <= 15 && ny >= 0 && ny <= 7 && grille[nx][ny] == 0) { ennemiX[i] = nx; ennemiY[i] = ny; }
+// --- NAVIGATION GENERALE ---
+void handleMenuNavigation() {
+  if (digitalRead(BTN_VERT) == HIGH) {
+    bruitSelection();
+    if (pageActuelle == PRINCIPAL) changerDePage(NIVEAUX);
+    else if (pageActuelle == PARAMETRES) changerDePage(COULEUR);
+    else if (pageActuelle == NIVEAUX) initialiserJeu(JEU_NIV1);
+    while(digitalRead(BTN_VERT) == HIGH); delay(100);
+  }
+  if (digitalRead(BTN_BLEU) == HIGH) {
+    bruitSelection();
+    if (pageActuelle == PRINCIPAL) changerDePage(PARAMETRES);
+    else changerDePage(PRINCIPAL);
+    while(digitalRead(BTN_BLEU) == HIGH); delay(100);
+  }
+  if (pageActuelle == NIVEAUX) {
+    if (digitalRead(BTN_JAUNE) == HIGH) { bruitSelection(); initialiserJeu(JEU_NIV2); }
+    if (digitalRead(BTN_ORANGE) == HIGH) { bruitSelection(); initialiserJeu(JEU_NIV3); }
   }
 }
 
 void drawMenuPrincipal() { changerDePage(PRINCIPAL); }
+
+// --- SETUP & LOOP ---
+void setup() {
+  pinMode(BTN_ORANGE, INPUT); pinMode(BTN_VERT, INPUT);
+  pinMode(BTN_BLEU, INPUT); pinMode(BTN_JAUNE, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  
+  tft.init(); 
+  tft.setRotation(1);
+  drawMenuPrincipal();
+}
+
+void loop() {
+  if (pageActuelle == COULEUR) handleMenuCouleurLogic();
+  else if (pageActuelle >= JEU_NIV1) handleGameLogic();
+  else handleMenuNavigation();
+}
