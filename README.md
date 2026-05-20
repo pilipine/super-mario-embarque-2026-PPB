@@ -5,18 +5,15 @@
 Concevoir une console portable autonome reproduisant un niveau simplifié de Super Mario Bros, avec :
 
 - affichage LCD
-- scroll horizontal
-- déplacements + collisions
+- déplacements (gauche, droite, haut, bas) 
 - obstacles/ennemis
-- sons (buzzer)
-- gyroscope
+- sons pour les touche le Gagné et le game over (buzzer)
 - boîtier 3D imprimé
 
 ## Matériel (fourni)
 
 - microcontrôleur
 - écran LCD
-- gyroscope
 - buzzer
 - batterie
 
