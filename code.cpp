@@ -309,8 +309,8 @@ void drawMenuPrincipal() { changerDePage(PRINCIPAL); }
 
 // --- SETUP & LOOP ---
 void setup() {
-  pinMode(BTN_ORANGE, INPUT); pinMode(BTN_VERT, INPUT);
-  pinMode(BTN_BLEU, INPUT); pinMode(BTN_JAUNE, INPUT);
+pinMode(BTN_ORANGE, INPUT_PULLUP); pinMode(BTN_VERT, INPUT_PULLUP);
+  pinMode(BTN_BLEU, INPUT_PULLUP); pinMode(BTN_JAUNE, INPUT_PULLUP);
   pinMode(BUZZER_PIN, OUTPUT);
   
   tft.init(); 
