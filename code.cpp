@@ -28,7 +28,7 @@ Page pageActuelle = PRINCIPAL; // Le jeu commence sur l'écran du menu principal
 
 uint16_t couleurMarioActive = MY_RED; // Couleur de départ du personnage (Mario)
 int indexCurseurCouleur = 0;          // Position du curseur dans le menu de sélection des couleurs
-uint16_t palette[] = {0xF844, 0xFFE0, 0xF81F, 0x001F, 0x0400, 0x780F, 0xD6BA}; // Tableau contenant 7 couleurs au choix
+uint16_t palette[] = {0xF844, 0xFBE0, 0xF81F, 0x001F, 0x0400, 0x780F, 0xD6BA}; // Tableau contenant 7 couleurs au choix
 
 bool estAnglais = false; // Gestion de la langue : false = Français, true = Anglais
 
