@@ -9,7 +9,7 @@ TFT_eSPI tft = TFT_eSPI(); // Création de l'objet "tft" pour interagir avec l'�
 #define BTN_BLEU    27  // Bouton Bleu connecté à la broche 27
 #define BTN_JAUNE   32  // Bouton Jaune connecté à la broche 32
 #define BUZZER_PIN  14  // Broche pour le haut-parleur/buzzer (effets sonores)
-#define SWITCH_PIN  33  // Broche pour l'interrupteur (options futures comme couper le son)
+
 
 // --- Couleurs (Format RGB565 / Hexadécimal 16-bits) ---
 #define MY_RED       0xF800
@@ -39,7 +39,7 @@ byte grille[16][8];             // Grille de jeu de 16 colonnes par 8 lignes (0 
 int nbEnnemisActuels = 0;       // Nombre d'ennemis présents sur la carte selon le niveau
 int ennemiX[11], ennemiY[11];   // Tableaux pour stocker les coordonnées de chaque ennemi (max 11)
 
-// Déclaration des prototypes (indique à Arduino que ces fonctions existent plus bas)
+// Prototypes de fonctions. Indiquent au compilateur que ces fonctions existent plus bas dans le code, évitant ainsi des erreurs de compilation.
 void changerDePage(Page p);
 void drawMenuCouleurs();
 void drawGrilleJeu();
@@ -282,7 +282,7 @@ void initialiserJeu(Page niv) {
   else if (niv == JEU_NIV2) nbEnnemisActuels = 5;
   else if (niv == JEU_NIV3) nbEnnemisActuels = 11;
   
-  // Génération aléatoire de la carte (les obstacles)
+  // pas d'obstacle près du mario
   for (int x = 0; x < 16; x++) { 
     for (int y = 0; y < 8; y++) { 
       if (x <= 1 && y <= 1) { 
